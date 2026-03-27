@@ -40,8 +40,17 @@ $siteMedia = loadSiteMediaConfig();
 $msg = '';
 $msgType = 'success';
 
+if (isset($_GET['db_error']) && $_GET['db_error'] === '1') {
+    $msg = 'O banco de dados do painel principal está indisponível no momento, mas você ainda pode atualizar as mídias globais do site por aqui.';
+    $msgType = 'warning';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $brandingUpload = salvarUploadMidia('branding_logo');
+        $siteMedia['branding']['logo_url'] = $brandingUpload ?: trim((string)($_POST['branding_logo_url'] ?? $siteMedia['branding']['logo_url'] ?? ''));
+        $siteMedia['branding']['logo_alt'] = trim((string)($_POST['branding_logo_alt'] ?? $siteMedia['branding']['logo_alt'] ?? 'Simplesmente Arraial do Cabo'));
+
         foreach ($siteMedia['hero_slides'] as $i => $slide) {
             $upload = salvarUploadMidia('hero_image_' . $i);
             $siteMedia['hero_slides'][$i]['image_url'] = $upload ?: trim((string)($_POST['hero_image_url_' . $i] ?? $slide['image_url'] ?? ''));
@@ -98,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 .menu{display:flex;flex-direction:column;gap:8px}.menu a{padding:12px 14px;border-radius:14px;color:rgba(255,255,255,.86);display:flex;gap:10px;align-items:center}.menu a.active,.menu a:hover{background:rgba(255,255,255,.16);color:#fff}.sidebar-footer{margin-top:auto;padding-top:24px;display:flex;flex-direction:column;gap:10px}.sidebar .ghost{background:rgba(255,255,255,.14)}
 .main{flex:1;padding:24px}.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}.topbar h1{margin:0;font-size:1.7rem;color:var(--primary-dark)}.topbar p{margin:6px 0 0;color:var(--muted)}
 .card{background:var(--card);border-radius:20px;padding:18px;box-shadow:0 8px 30px rgba(16,24,40,.06);border:1px solid rgba(228,231,236,.8);margin-bottom:18px}.section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.section-title h2{margin:0;font-size:1.15rem;color:var(--primary-dark)}.section-title span{color:var(--muted);font-size:.9rem}
-.alert{padding:14px 16px;border-radius:16px;margin-bottom:18px;border:1px solid transparent}.alert.success{background:var(--success-bg);color:var(--success);border-color:#a6f4c5}.alert.error{background:var(--danger-bg);color:var(--danger);border-color:#fecdca}
+.alert{padding:14px 16px;border-radius:16px;margin-bottom:18px;border:1px solid transparent}.alert.success{background:var(--success-bg);color:var(--success);border-color:#a6f4c5}.alert.error{background:var(--danger-bg);color:var(--danger);border-color:#fecdca}.alert.warning{background:#fff7ed;color:#b54708;border-color:#fed7aa}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.media-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:.84rem;color:var(--muted)} input,textarea{width:100%;padding:12px 14px;border:1px solid #d0d5dd;border-radius:12px;font:400 .94rem Poppins,sans-serif;background:#fff} textarea{min-height:90px;resize:vertical}
 .preview{width:100%;max-height:220px;object-fit:cover;border-radius:16px;border:1px solid var(--line);background:#eef4f8}.slot{border:1px dashed #d0d5dd;border-radius:18px;padding:16px;background:#fcfdff}.slot h3{margin:0 0 12px;color:var(--primary-dark)}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:none;border-radius:12px;padding:11px 14px;font:500 .95rem Poppins,sans-serif;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center}.btn-primary{background:linear-gradient(135deg,#00a8cc,#0077be);color:#fff}.btn-light{background:#fff;border:1px solid var(--line);color:var(--text)}
 @media (max-width:1000px){.layout{display:block}.sidebar{position:relative;height:auto;width:auto}.main{padding:18px}.grid,.media-grid{grid-template-columns:1fr}}
@@ -130,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="topbar">
       <div>
         <h1>Mídias globais do site</h1>
-        <p>Troque as imagens da home direto do computador, sem depender do código-fonte.</p>
+        <p>Troque logo, hero, destinos e galeria da home direto do computador, sem depender do código-fonte.</p>
       </div>
       <div class="actions">
         <a class="btn btn-light" href="index.php?tab=passeios"><i class="fas fa-route"></i> Voltar para passeios</a>
@@ -143,6 +152,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <form method="POST" enctype="multipart/form-data">
       <div class="card">
+        <div class="section-title"><h2>Logo da marca</h2><span>Usada no topo e no rodapé do site</span></div>
+        <div class="media-grid" style="margin-bottom:18px">
+          <div class="slot">
+            <h3>Logo principal</h3>
+            <img class="preview" style="object-fit:contain;background:#fff;padding:18px" src="<?= h(assetUrl($siteMedia['branding']['logo_url'] ?? '', '../')) ?>" alt="Preview da logo do site">
+            <div class="field"><label>Upload do computador</label><input type="file" name="branding_logo" accept="image/*"></div>
+            <div class="field"><label>Ou URL da logo</label><input type="text" name="branding_logo_url" value="<?= h($siteMedia['branding']['logo_url'] ?? '') ?>"></div>
+            <div class="field"><label>Texto alternativo (SEO/acessibilidade)</label><input type="text" name="branding_logo_alt" value="<?= h($siteMedia['branding']['logo_alt'] ?? 'Simplesmente Arraial do Cabo') ?>"></div>
+          </div>
+        </div>
+
         <div class="section-title"><h2>Hero principal</h2><span>4 slides da home</span></div>
         <div class="media-grid">
           <?php foreach ($siteMedia['hero_slides'] as $i => $slide): ?>

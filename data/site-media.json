@@ -1,64 +1,136 @@
 {
-  "hero_slides": [
-    {
-      "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=1800",
-      "badge": "⭐ Passeio em Destaque",
-      "title": "Descubra Arraial do Cabo",
-      "description": "Águas cristalinas e praias paradisíacas te esperam no Caribe Brasileiro",
-      "primary_text": "Ver Passeios",
-      "primary_link": "#passeios",
-      "secondary_text": "Saiba Mais",
-      "secondary_link": "passeio-detalhes.html?id=barco-arraial-1"
-    },
-    {
-      "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/734e0371-4a94-40f9-0007-8c0a2125c300/w=1800",
-      "badge": "🎉 Festa no Mar",
-      "title": "Búzios com Estilo",
-      "description": "Catamarã Premium com DJ ao vivo, diversão e águas cristalinas",
-      "primary_text": "Reservar Agora",
-      "primary_link": "passeio-detalhes.html?id=barco-buzios-1",
-      "secondary_text": "Explorar Mais",
-      "secondary_link": "#passeios"
-    },
-    {
-      "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/2d79a478-86da-48d2-cbe7-08bd92982400/w=1800",
-      "badge": "🚌 Excursões Saindo do RJ",
-      "title": "Bate e Volta Inesquecível",
-      "description": "Conheça os destinos mais lindos em um único dia",
-      "primary_text": "Ver Excursões",
-      "primary_link": "#passeios",
-      "secondary_text": "Falar Conosco",
-      "secondary_link": "#contato"
-    },
-    {
-      "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/50e1be52-6dd7-4fbe-1c33-7e4aab990700/w=1800",
-      "badge": "🏄 Aventura e Adrenalina",
-      "title": "Experiências Radicais",
-      "description": "Buggy, Quadriciclo, Mergulho e muito mais!",
-      "primary_text": "Quero Aventura!",
-      "primary_link": "#passeios",
-      "secondary_text": "Todos os Passeios",
-      "secondary_link": "#passeios"
-    }
-  ],
-  "destinos": [
-    {"key": "Arraial do Cabo", "title": "Arraial do Cabo", "text": "Praias paradisíacas com águas cristalinas", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=900"},
-    {"key": "Búzios", "title": "Búzios", "text": "Sofisticação e charme mediterrâneo", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/11a6e4fa-5f47-4927-4134-60ab57cd7b00/w=900"},
-    {"key": "Cabo Frio", "title": "Cabo Frio", "text": "Dunas de areia branca e sol o ano todo", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/f983a0c1-e19f-4acb-55af-c07319a34800/w=900"},
-    {"key": "Angra dos Reis", "title": "Angra dos Reis", "text": "365 ilhas de pura beleza natural", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/44ad3533-655c-4ede-95a6-b27d4c7fb000/w=900"},
-    {"key": "Ilha Grande", "title": "Ilha Grande", "text": "Natureza intocada e praias selvagens", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/b857b248-a932-41ee-e473-ec50d523b200/w=900"},
-    {"key": "Paraty", "title": "Paraty", "text": "História colonial e baías deslumbrantes", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/ee406657-fc12-4b6d-db87-798f435af800/w=900"},
-    {"key": "Rio de Janeiro", "title": "Rio de Janeiro", "text": "Cristo Redentor, Pão de Açúcar e muito mais", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/a7307552-6716-4d0c-974b-48bc0325ab00/w=900"},
-    {"key": "Petrópolis", "title": "Petrópolis", "text": "A cidade imperial da serra carioca", "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/cdcd65fc-ecda-4205-0949-03ee17d2ac00/w=900"}
-  ],
-  "inspira_gallery": [
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=900", "title": "Caminho de areia em Arraial do Cabo", "description": "Visual perfeito para destacar experiências exclusivas e passeios contemplativos."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/fd36d1b9-e256-44cc-3c40-62096b78d300/w=900", "title": "Barco em água cristalina", "description": "Imagem ideal para valorizar passeios de barco e experiências premium."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/7652c285-cd49-4128-bb3b-dc37371c5700/w=900", "title": "Enseada com embarcações", "description": "Mostra movimento, procura alta e clima de verão na região."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/080b6548-7df7-4edf-8a85-cf87e55c5700/w=1800", "title": "Praia preservada vista do alto", "description": "Perfeita para reforçar a beleza natural e o apelo visual do destino."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/60855586-81f2-4f44-f864-55e68ff07e00/w=1800", "title": "Praia com mar verde-esmeralda", "description": "Ótima para comunicar lazer, família e passeio de dia inteiro."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/44ad3533-655c-4ede-95a6-b27d4c7fb000/w=900", "title": "Escuna turística", "description": "Ajuda a contextualizar o tipo de embarcação usado nos roteiros."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c62221bc-068a-498a-3aa8-6a3561de6c00/w=900", "title": "Acesso à praia por passarela", "description": "Traz sensação de chegada ao paraíso e reforça o aspecto aspiracional."},
-    {"url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/ee406657-fc12-4b6d-db87-798f435af800/w=900", "title": "Praia selvagem com ondas", "description": "Boa para destacar aventura, natureza e experiências fora do óbvio."}
-  ]
+    "hero_slides": [
+        {
+            "image_url": "uploads/site/site_69c6df4346ce44.97891099.jpeg",
+            "badge": "⭐ Passeio em Destaque",
+            "title": "Descubra Arraial do Cabo",
+            "description": "Águas cristalinas e praias paradisíacas te esperam no Caribe Brasileiro",
+            "primary_text": "Ver Passeios",
+            "primary_link": "#passeios",
+            "secondary_text": "Saiba Mais",
+            "secondary_link": "passeio-detalhes.html?id=barco-arraial-1"
+        },
+        {
+            "image_url": "uploads/site/site_69c6d91c9839c0.83297618.jpg",
+            "badge": "🎉 Festa no Mar",
+            "title": "Búzios com Estilo",
+            "description": "Catamarã Premium com DJ ao vivo, diversão e águas cristalinas",
+            "primary_text": "Reservar Agora",
+            "primary_link": "passeio-detalhes.html?id=barco-buzios-1",
+            "secondary_text": "Explorar Mais",
+            "secondary_link": "#passeios"
+        },
+        {
+            "image_url": "https://simplesmentearraialdocabo.com.br/uploads/site/site_69c6d91c9848e0.33382205.png",
+            "badge": "🚌 Excursões Saindo do RJ",
+            "title": "Bate e Volta Inesquecível",
+            "description": "Conheça os destinos mais lindos em um único dia",
+            "primary_text": "Ver Excursões",
+            "primary_link": "#passeios",
+            "secondary_text": "Falar Conosco",
+            "secondary_link": "#contato"
+        },
+        {
+            "image_url": "uploads/site/site_69c6d91c98ad99.77688401.jpg",
+            "badge": "🏄 Aventura e Adrenalina",
+            "title": "Experiências Radicais",
+            "description": "Buggy, Quadriciclo, Mergulho e muito mais!",
+            "primary_text": "Quero Aventura!",
+            "primary_link": "#passeios",
+            "secondary_text": "Todos os Passeios",
+            "secondary_link": "#passeios"
+        }
+    ],
+    "destinos": [
+        {
+            "key": "Arraial do Cabo",
+            "title": "Arraial do Cabo",
+            "text": "Praias paradisíacas com águas cristalinas",
+            "image_url": "uploads/site/site_69c6dbb16f8281.60972616.jpeg"
+        },
+        {
+            "key": "Búzios",
+            "title": "Búzios",
+            "text": "Sofisticação e charme mediterrâneo",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/11a6e4fa-5f47-4927-4134-60ab57cd7b00/w=900"
+        },
+        {
+            "key": "Cabo Frio",
+            "title": "Cabo Frio",
+            "text": "Dunas de areia branca e sol o ano todo",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/f983a0c1-e19f-4acb-55af-c07319a34800/w=900"
+        },
+        {
+            "key": "Angra dos Reis",
+            "title": "Angra dos Reis",
+            "text": "365 ilhas de pura beleza natural",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/44ad3533-655c-4ede-95a6-b27d4c7fb000/w=900"
+        },
+        {
+            "key": "Ilha Grande",
+            "title": "Ilha Grande",
+            "text": "Natureza intocada e praias selvagens",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/b857b248-a932-41ee-e473-ec50d523b200/w=900"
+        },
+        {
+            "key": "Paraty",
+            "title": "Paraty",
+            "text": "História colonial e baías deslumbrantes",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/ee406657-fc12-4b6d-db87-798f435af800/w=900"
+        },
+        {
+            "key": "Rio de Janeiro",
+            "title": "Rio de Janeiro",
+            "text": "Cristo Redentor, Pão de Açúcar e muito mais",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/a7307552-6716-4d0c-974b-48bc0325ab00/w=900"
+        },
+        {
+            "key": "Petrópolis",
+            "title": "Petrópolis",
+            "text": "A cidade imperial da serra carioca",
+            "image_url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/cdcd65fc-ecda-4205-0949-03ee17d2ac00/w=900"
+        }
+    ],
+    "inspira_gallery": [
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=900",
+            "title": "Caminho de areia em Arraial do Cabo",
+            "description": "Visual perfeito para destacar experiências exclusivas e passeios contemplativos."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/fd36d1b9-e256-44cc-3c40-62096b78d300/w=900",
+            "title": "Barco em água cristalina",
+            "description": "Imagem ideal para valorizar passeios de barco e experiências premium."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/7652c285-cd49-4128-bb3b-dc37371c5700/w=900",
+            "title": "Enseada com embarcações",
+            "description": "Mostra movimento, procura alta e clima de verão na região."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/080b6548-7df7-4edf-8a85-cf87e55c5700/w=1800",
+            "title": "Praia preservada vista do alto",
+            "description": "Perfeita para reforçar a beleza natural e o apelo visual do destino."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/60855586-81f2-4f44-f864-55e68ff07e00/w=1800",
+            "title": "Praia com mar verde-esmeralda",
+            "description": "Ótima para comunicar lazer, família e passeio de dia inteiro."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/44ad3533-655c-4ede-95a6-b27d4c7fb000/w=900",
+            "title": "Escuna turística",
+            "description": "Ajuda a contextualizar o tipo de embarcação usado nos roteiros."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c62221bc-068a-498a-3aa8-6a3561de6c00/w=900",
+            "title": "Acesso à praia por passarela",
+            "description": "Traz sensação de chegada ao paraíso e reforça o aspecto aspiracional."
+        },
+        {
+            "url": "https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/ee406657-fc12-4b6d-db87-798f435af800/w=900",
+            "title": "Praia selvagem com ondas",
+            "description": "Boa para destacar aventura, natureza e experiências fora do óbvio."
+        }
+    ]
 }

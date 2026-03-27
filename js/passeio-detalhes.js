@@ -7,6 +7,14 @@ let thumbsSwiper = null;
 let relacionadosSwiper = null;
 
 const API_TIMEOUT = 8000;
+const PAGE_ASSET_BUSTER = Date.now();
+let siteMedia = {
+    asset_version: String(PAGE_ASSET_BUSTER),
+    branding: {
+        logo_url: 'https://www.genspark.ai/api/files/s/eTJcP2Bb',
+        logo_alt: 'Simplesmente Arraial do Cabo'
+    }
+};
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,8 +33,56 @@ async function initDetalhes() {
     setupNavegacao();
     setupScroll();
     setupForm();
+    await carregarMidiasDoSite();
+    aplicarBrandingSite();
 
     await carregarPasseio(passeioId);
+}
+
+async function carregarMidiasDoSite() {
+    try {
+        const response = await fetch(`api/site-media.php?t=${Date.now()}`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Falha ao buscar mídias do site: ${response.status}`);
+        }
+
+        const payload = await response.json();
+        if (payload?.success && payload.data) {
+            siteMedia = {
+                ...siteMedia,
+                ...payload.data
+            };
+        }
+    } catch (error) {
+        console.warn('Falha ao carregar branding global do site.', error);
+    }
+}
+
+function resolverAssetUrl(url, version = siteMedia?.asset_version || PAGE_ASSET_BUSTER) {
+    if (!url) return '';
+
+    const value = String(url).trim();
+    if (!value) return '';
+    if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+
+    const normalized = value.replace(/^\.\//, '').replace(/^\//, '');
+    const separator = normalized.includes('?') ? '&' : '?';
+    return `${normalized}${separator}v=${encodeURIComponent(version)}`;
+}
+
+function aplicarBrandingSite() {
+    const logoUrl = resolverAssetUrl(siteMedia?.branding?.logo_url || '');
+    if (!logoUrl) return;
+
+    const logoAlt = siteMedia?.branding?.logo_alt || 'Simplesmente Arraial do Cabo';
+    document.querySelectorAll('.logo-img, .footer-logo-img').forEach(img => {
+        img.src = logoUrl;
+        img.alt = logoAlt;
+    });
 }
 
 // ===== API =====
@@ -83,9 +139,9 @@ async function buscarPasseiosViaApi() {
 }
 
 function normalizarPasseioDetalhes(passeio) {
-    const imagemPrincipal = passeio.imagemUrl || passeio.imagem_url || '';
+    const imagemPrincipal = resolverAssetUrl(passeio.imagemUrl || passeio.imagem_url || '');
     const galeria = Array.isArray(passeio.galeria) && passeio.galeria.length
-        ? passeio.galeria
+        ? passeio.galeria.map(item => resolverAssetUrl(item))
         : (imagemPrincipal ? [imagemPrincipal] : []);
 
     return {

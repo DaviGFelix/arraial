@@ -24,14 +24,20 @@ if (empty($_SESSION['admin_ok'])) {
     exit;
 }
 
-$db = getDB();
-$tab = $_GET['tab'] ?? 'dashboard';
+$db = null;
+try {
+    $db = getDB();
+} catch (Throwable $e) {
+    header("Location: midias.php?db_error=1");
+    exit;
+}
+
+$tab = $_GET["tab"] ?? "dashboard";
 $extendedColumns = passeioExtendedColumnsAvailable();
 $snapshotColumns = reservasSnapshotColumnsAvailable();
-$valueExpr = reservationValueExpression('r', 'p');
-$msg = '';
-$msgType = 'success';
-
+$valueExpr = reservationValueExpression("r", "p");
+$msg = "";
+$msgType = "success";
 function adminUrl(array $params = []): string {
     $query = array_merge($_GET, $params);
     unset($query['logout']);

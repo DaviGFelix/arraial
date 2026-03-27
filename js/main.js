@@ -26,9 +26,15 @@ const formReserva = document.getElementById('form-reserva');
 const inspiraSwiperWrapper = document.getElementById('inspira-swiper-wrapper');
 
 const API_TIMEOUT = 8000;
+const PAGE_ASSET_BUSTER = Date.now();
 
 // ===== MÍDIAS GLOBAIS DO SITE =====
 const DEFAULT_SITE_MEDIA = {
+    asset_version: String(PAGE_ASSET_BUSTER),
+    branding: {
+        logo_url: 'https://www.genspark.ai/api/files/s/eTJcP2Bb',
+        logo_alt: 'Simplesmente Arraial do Cabo'
+    },
     hero_slides: [
         {
             image_url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=1800',
@@ -82,14 +88,14 @@ const DEFAULT_SITE_MEDIA = {
         { key: 'Petrópolis', title: 'Petrópolis', text: 'A cidade imperial da serra carioca', image_url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/cdcd65fc-ecda-4205-0949-03ee17d2ac00/w=900' }
     ],
     inspira_gallery: [
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=900', titulo: 'Caminho de areia em Arraial do Cabo', descricao: 'Visual perfeito para destacar experiências exclusivas e passeios contemplativos.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/fd36d1b9-e256-44cc-3c40-62096b78d300/w=900', titulo: 'Barco em água cristalina', descricao: 'Imagem ideal para valorizar passeios de barco e experiências premium.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/7652c285-cd49-4128-bb3b-dc37371c5700/w=900', titulo: 'Enseada com embarcações', descricao: 'Mostra movimento, procura alta e clima de verão na região.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/080b6548-7df7-4edf-8a85-cf87e55c5700/w=1800', titulo: 'Praia preservada vista do alto', descricao: 'Perfeita para reforçar a beleza natural e o apelo visual do destino.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/60855586-81f2-4f44-f864-55e68ff07e00/w=1800', titulo: 'Praia com mar verde-esmeralda', descricao: 'Ótima para comunicar lazer, família e passeio de dia inteiro.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/44ad3533-655c-4ede-95a6-b27d4c7fb000/w=900', titulo: 'Escuna turística', descricao: 'Ajuda a contextualizar o tipo de embarcação usado nos roteiros.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c62221bc-068a-498a-3aa8-6a3561de6c00/w=900', titulo: 'Acesso à praia por passarela', descricao: 'Traz sensação de chegada ao paraíso e reforça o aspecto aspiracional.' },
-        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/ee406657-fc12-4b6d-db87-798f435af800/w=900', titulo: 'Praia selvagem com ondas', descricao: 'Boa para destacar aventura, natureza e experiências fora do óbvio.' }
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=900', title: 'Caminho de areia em Arraial do Cabo', description: 'Visual perfeito para destacar experiências exclusivas e passeios contemplativos.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/fd36d1b9-e256-44cc-3c40-62096b78d300/w=900', title: 'Barco em água cristalina', description: 'Imagem ideal para valorizar passeios de barco e experiências premium.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/7652c285-cd49-4128-bb3b-dc37371c5700/w=900', title: 'Enseada com embarcações', description: 'Mostra movimento, procura alta e clima de verão na região.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/080b6548-7df7-4edf-8a85-cf87e55c5700/w=1800', title: 'Praia preservada vista do alto', description: 'Perfeita para reforçar a beleza natural e o apelo visual do destino.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/60855586-81f2-4f44-f864-55e68ff07e00/w=1800', title: 'Praia com mar verde-esmeralda', description: 'Ótima para comunicar lazer, família e passeio de dia inteiro.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/44ad3533-655c-4ede-95a6-b27d4c7fb000/w=900', title: 'Escuna turística', description: 'Ajuda a contextualizar o tipo de embarcação usado nos roteiros.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c62221bc-068a-498a-3aa8-6a3561de6c00/w=900', title: 'Acesso à praia por passarela', description: 'Traz sensação de chegada ao paraíso e reforça o aspecto aspiracional.' },
+        { url: 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/ee406657-fc12-4b6d-db87-798f435af800/w=900', title: 'Praia selvagem com ondas', description: 'Boa para destacar aventura, natureza e experiências fora do óbvio.' }
     ]
 };
 
@@ -130,6 +136,7 @@ async function initApp() {
     setupDateInput();
     setupPhoneInput();
     await carregarMidiasDoSite();
+    aplicarBrandingSite();
     aplicarDestinosDinamicos();
     renderHeroSlides();
     setupHeroCarousel();
@@ -184,7 +191,7 @@ function setupScroll() {
 // ===== CARREGAR MÍDIAS DO SITE =====
 async function carregarMidiasDoSite() {
     try {
-        const response = await fetch('api/site-media.php', {
+        const response = await fetch(`api/site-media.php?t=${Date.now()}`, {
             method: 'GET',
             headers: { Accept: 'application/json' }
         });
@@ -205,6 +212,29 @@ async function carregarMidiasDoSite() {
     }
 }
 
+function resolverAssetUrl(url, version = siteMedia?.asset_version || PAGE_ASSET_BUSTER) {
+    if (!url) return '';
+
+    const value = String(url).trim();
+    if (!value) return '';
+    if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+
+    const normalized = value.replace(/^\.\//, '').replace(/^\//, '');
+    const separator = normalized.includes('?') ? '&' : '?';
+    return `${normalized}${separator}v=${encodeURIComponent(version)}`;
+}
+
+function aplicarBrandingSite() {
+    const logoUrl = resolverAssetUrl(siteMedia?.branding?.logo_url || '');
+    if (!logoUrl) return;
+
+    const logoAlt = siteMedia?.branding?.logo_alt || 'Simplesmente Arraial do Cabo';
+    document.querySelectorAll('.logo-img, .footer-logo-img').forEach(img => {
+        img.src = logoUrl;
+        img.alt = logoAlt;
+    });
+}
+
 function renderHeroSlides() {
     const heroWrapper = document.querySelector('.hero-swiper .swiper-wrapper');
     if (!heroWrapper) return;
@@ -215,7 +245,7 @@ function renderHeroSlides() {
 
     heroWrapper.innerHTML = slides.map((slide, index) => `
         <div class="swiper-slide hero-slide">
-            <img src="${escHtml(slide.image_url)}" alt="${escHtml(slide.title || `Slide ${index + 1}`)}" class="hero-slide__bg">
+            <img src="${escHtml(resolverAssetUrl(slide.image_url))}" alt="${escHtml(slide.title || `Slide ${index + 1}`)}" class="hero-slide__bg">
             <div class="hero-slide__overlay"></div>
             <div class="hero-slide__content container">
                 <span class="hero-slide__badge">${escHtml(slide.badge || 'Destaque')}</span>
@@ -244,7 +274,7 @@ function aplicarDestinosDinamicos() {
         const text = card.querySelector('.destino__text');
 
         if (image && destino.image_url) {
-            image.src = destino.image_url;
+            image.src = resolverAssetUrl(destino.image_url);
             image.alt = destino.title || destino.key;
         }
         if (title && destino.title) {
@@ -297,7 +327,7 @@ function setupGaleriaInspiracao() {
         : DEFAULT_SITE_MEDIA.inspira_gallery;
 
     inspiraSwiperWrapper.innerHTML = galeria.map((item) => {
-        const url = item.url || item.image_url || '';
+        const url = resolverAssetUrl(item.url || item.image_url || '');
         const titulo = item.titulo || item.title || '';
         const descricao = item.descricao || item.description || '';
 
@@ -434,10 +464,10 @@ function normalizarPasseio(passeio) {
         descricao: passeio.descricao || '',
         duracao: passeio.duracao || '',
         destaque: Boolean(passeio.destaque),
-        imagemUrl: passeio.imagemUrl || passeio.imagem_url || '',
+        imagemUrl: resolverAssetUrl(passeio.imagemUrl || passeio.imagem_url || ''),
         precoLabel,
         precoValor: passeio.precoValor || passeio.preco_valor || null,
-        galeria: Array.isArray(passeio.galeria) ? passeio.galeria : []
+        galeria: Array.isArray(passeio.galeria) ? passeio.galeria.map(item => resolverAssetUrl(item)) : []
     };
 }
 

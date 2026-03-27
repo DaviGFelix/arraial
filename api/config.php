@@ -3,15 +3,29 @@
 // api/config.php — Configuração central do sistema
 // =====================================================
 
-define('DB_HOST', 'localhost');
-define('DB_PORT', '3306');
-define('DB_NAME', 'simp7774_arraial_db');
-define('DB_USER', 'simp7774_SimArraial');
-define('DB_PASS', '041288Pedro*');
-define('DB_CHARSET', 'utf8mb4');
+function configEnv(string $key, string $default = ''): string {
+    $value = getenv($key);
+    if ($value === false) {
+        return $default;
+    }
 
-define('WA_NUMBER', '5522981709100');
-define('ADMIN_PASS', '041288Pedro*');
+    $value = trim((string)$value);
+    if ($value === '' || $value === $key) {
+        return $default;
+    }
+
+    return $value;
+}
+
+defined('DB_HOST') || define('DB_HOST', configEnv('DB_HOST', 'localhost'));
+defined('DB_PORT') || define('DB_PORT', configEnv('DB_PORT', '3306'));
+defined('DB_NAME') || define('DB_NAME', configEnv('DB_NAME', 'simp7774_arraial_db'));
+defined('DB_USER') || define('DB_USER', configEnv('DB_USER', 'simp7774_SimArraial'));
+defined('DB_PASS') || define('DB_PASS', configEnv('DB_PASS', '041288Pedro*'));
+defined('DB_CHARSET') || define('DB_CHARSET', configEnv('DB_CHARSET', 'utf8mb4'));
+
+defined('WA_NUMBER') || define('WA_NUMBER', configEnv('WA_NUMBER', '5522981709100'));
+defined('ADMIN_PASS') || define('ADMIN_PASS', configEnv('ADMIN_PASS', '041288Pedro*'));
 
 function getDB(): PDO {
     static $pdo = null;
@@ -222,6 +236,11 @@ function loadCatalogSnapshot(): array {
 
 function defaultSiteMediaConfig(): array {
     return [
+        'asset_version' => (string)time(),
+        'branding' => [
+            'logo_url' => 'https://www.genspark.ai/api/files/s/eTJcP2Bb',
+            'logo_alt' => 'Simplesmente Arraial do Cabo',
+        ],
         'hero_slides' => [
             [
                 'image_url' => 'https://imagedelivery.net/EafvxYlk8cSUsWEWsetEdQ/c4b4fb96-11f7-459d-bd5a-73b8a593fa00/w=1800',
@@ -312,6 +331,7 @@ function loadSiteMediaConfig(): array {
 }
 
 function saveSiteMediaConfig(array $config): bool {
+    $config['asset_version'] = (string)time();
     $normalized = normalizeSiteMediaConfig($config);
     $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     return (bool)file_put_contents(siteMediaPath(), $json);
