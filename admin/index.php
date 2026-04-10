@@ -34,6 +34,7 @@ try {
 
 $tab = $_GET["tab"] ?? "dashboard";
 $extendedColumns = passeioExtendedColumnsAvailable();
+$trashColumnAvailable = passeioDeletedColumnAvailable();
 $snapshotColumns = reservasSnapshotColumnsAvailable();
 $valueExpr = reservationValueExpression("r", "p");
 $msg = "";
@@ -93,6 +94,119 @@ function showLogin(string $err = ''): void { ?>
   <?php if ($err): ?><div class="err"><?= h($err) ?></div><?php endif; ?>
   <div class="hint">Dica: altere a senha padrão em <code>api/config.php</code> ou via variável de ambiente <code>ADMIN_PASS</code>.</div>
 </div>
+<script>
+function escapeAdminHtml(texto) {
+  return String(texto || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function adminDescricaoTemHtml(texto) {
+  return /<\s*(p|br|ul|ol|li|strong|em|b|i|u|h2|h3|h4|hr|a)\b/i.test(texto || '');
+}
+
+function adminLinhaLista(linha) {
+  return /^([\-*•◦▪▫■□●✔✅☑️✓]|\d+[.)])\s+/u.test(linha) || /^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]\s+/u.test(linha);
+}
+
+function adminLimparMarcadorLista(linha) {
+  return String(linha || '').replace(/^([\-*•◦▪▫■□●✔✅☑️✓]|\d+[.)])\s+/u, '').trim();
+}
+
+function adminLinhaTitulo(linha) {
+  const texto = String(linha || '').trim();
+  if (!texto || adminLinhaLista(texto) || texto.length > 90) return false;
+  return texto.endsWith(':') || /^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u.test(texto) || /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ0-9][^.!?]*$/u.test(texto);
+}
+
+function adminSanitizarHtmlBasico(html) {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  const permitidas = new Set(['P', 'BR', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'B', 'I', 'U', 'H2', 'H3', 'H4', 'HR', 'A']);
+
+  const limparNo = (node) => {
+    [...node.children].forEach((child) => {
+      if (!permitidas.has(child.tagName)) {
+        const fragment = document.createDocumentFragment();
+        while (child.firstChild) fragment.appendChild(child.firstChild);
+        child.replaceWith(fragment);
+        return;
+      }
+
+      [...child.attributes].forEach((attr) => {
+        const nome = attr.name.toLowerCase();
+        const valor = attr.value || '';
+        const permitido = child.tagName === 'A' && ['href', 'target', 'rel'].includes(nome);
+        if (!permitido) {
+          child.removeAttribute(attr.name);
+          return;
+        }
+        if (nome === 'href' && !/^(https?:|mailto:|tel:|#|\/)/i.test(valor)) {
+          child.removeAttribute(attr.name);
+        }
+      });
+
+      if (child.tagName === 'A') {
+        child.setAttribute('rel', 'noopener noreferrer');
+        child.setAttribute('target', '_blank');
+      }
+
+      limparNo(child);
+    });
+  };
+
+  limparNo(template.content);
+  return template.innerHTML;
+}
+
+function formatarDescricaoAdmin(texto) {
+  const normalizado = String(texto || '').replace(/\r\n?/g, '\n').trim();
+  if (!normalizado) return '';
+  if (adminDescricaoTemHtml(normalizado)) return adminSanitizarHtmlBasico(normalizado);
+
+  return normalizado
+    .split(/\n{2,}/)
+    .map((bloco) => bloco.trim())
+    .filter(Boolean)
+    .map((bloco) => {
+      const blocoSemEspacos = bloco.replace(/\s+/g, '');
+      if (/^[-_]{3,}$/u.test(blocoSemEspacos)) return '<hr>';
+
+      const linhas = bloco.split('\n').map((linha) => linha.trim()).filter(Boolean);
+      if (!linhas.length) return '';
+      if (linhas.length === 1 && adminLinhaTitulo(linhas[0])) return `<h3>${escapeAdminHtml(linhas[0].replace(/:$/, ''))}</h3>`;
+      if (linhas.every(adminLinhaLista)) return `<ul>${linhas.map((linha) => `<li>${escapeAdminHtml(adminLimparMarcadorLista(linha))}</li>`).join('')}</ul>`;
+      return `<p>${linhas.map((linha) => escapeAdminHtml(linha)).join('<br>')}</p>`;
+    })
+    .join('');
+}
+
+function initDescricaoPreview() {
+  const campo = document.getElementById('descricao_detalhada');
+  const preview = document.getElementById('descricao_detalhada_preview');
+  if (!campo || !preview) return;
+
+  const render = () => {
+    const html = formatarDescricaoAdmin(campo.value);
+    if (!html) {
+      preview.classList.add('muted');
+      preview.innerHTML = 'Digite acima para visualizar como o texto aparecerá na página do passeio.';
+      return;
+    }
+
+    preview.classList.remove('muted');
+    preview.innerHTML = html;
+  };
+
+  campo.addEventListener('input', render);
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', initDescricaoPreview);
+</script>
 </body>
 </html>
 <?php }
@@ -178,6 +292,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['senha'])) {
             $tab = 'passeios';
         }
 
+        if ($action === 'move_passeio_trash' && !empty($_POST['id'])) {
+            if (!$trashColumnAvailable) {
+                throw new RuntimeException('Para usar lixeira, execute o arquivo database/upgrade-admin.sql no MySQL para adicionar a coluna deleted_at.');
+            }
+
+            $stmt = $db->prepare('UPDATE passeios SET ativo = 0, deleted_at = NOW() WHERE id = :id');
+            $stmt->execute([':id' => $_POST['id']]);
+            $msg = 'Passeio movido para a lixeira com sucesso.';
+            saveCatalogSnapshot();
+            $tab = 'passeios';
+            if (($_GET['edit'] ?? '') === ($_POST['id'] ?? '')) {
+                $_GET['edit'] = '';
+            }
+        }
+
+        if ($action === 'restore_passeio' && !empty($_POST['id'])) {
+            if (!$trashColumnAvailable) {
+                throw new RuntimeException('A restauração da lixeira requer a coluna deleted_at. Execute o upgrade do banco primeiro.');
+            }
+
+            $stmt = $db->prepare('UPDATE passeios SET deleted_at = NULL WHERE id = :id');
+            $stmt->execute([':id' => $_POST['id']]);
+            $msg = 'Passeio restaurado da lixeira. Ele continuará oculto até você ativá-lo novamente.';
+            saveCatalogSnapshot();
+            $tab = 'passeios';
+        }
+
+        if ($action === 'delete_passeio_forever' && !empty($_POST['id'])) {
+            $stmt = $db->prepare('DELETE FROM passeios WHERE id = :id');
+            $stmt->execute([':id' => $_POST['id']]);
+            $msg = 'Passeio removido permanentemente do banco de dados.';
+            saveCatalogSnapshot();
+            $tab = 'passeios';
+            if (($_GET['edit'] ?? '') === ($_POST['id'] ?? '')) {
+                $_GET['edit'] = '';
+            }
+        }
+
         if ($action === 'save_passeio') {
             if (!$extendedColumns) {
                 throw new RuntimeException('Seu banco ainda não possui as colunas novas. Execute o arquivo database/upgrade-admin.sql antes de salvar passeios no painel.');
@@ -194,6 +346,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['senha'])) {
             $precoLabel = trim((string)($_POST['preco_label'] ?? ''));
             $imagemUrl = trim((string)($_POST['imagem_url'] ?? ''));
             $galeriaUrls = normalizarListaUrls((string)($_POST['galeria_urls'] ?? ''));
+            $horariosDisponiveis = normalizarListaUrls((string)($_POST['horarios_disponiveis'] ?? ''));
+            $idiomas = normalizarListaUrls((string)($_POST['idiomas'] ?? ''));
+            $gruposLabel = trim((string)($_POST['grupos_label'] ?? ''));
+            $destaques = normalizarListaUrls((string)($_POST['destaques'] ?? ''));
+            $garantias = normalizarListaUrls((string)($_POST['garantias'] ?? ''));
+            $minPessoas = max(1, min(100, (int)($_POST['min_pessoas'] ?? 1)));
+            $maxPessoas = max($minPessoas, min(100, (int)($_POST['max_pessoas'] ?? 50)));
+            $permitirACombinar = !empty($_POST['permitir_a_combinar']) ? 1 : 0;
             $ativo = !empty($_POST['ativo']) ? 1 : 0;
             $destaque = !empty($_POST['destaque']) ? 1 : 0;
 
@@ -251,6 +411,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['senha'])) {
                     preco_label = :preco_label,
                     imagem_url = :imagem_url,
                     galeria_json = :galeria_json,
+                    horarios_json = :horarios_json,
+                    idiomas_json = :idiomas_json,
+                    grupos_label = :grupos_label,
+                    destaques_json = :destaques_json,
+                    garantias_json = :garantias_json,
+                    min_pessoas = :min_pessoas,
+                    max_pessoas = :max_pessoas,
+                    permitir_a_combinar = :permitir_a_combinar,
                     destaque = :destaque,
                     ativo = :ativo
                     WHERE id = :id');
@@ -266,6 +434,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['senha'])) {
                     ':preco_label' => $precoLabel ?: null,
                     ':imagem_url' => $imagemUrl ?: null,
                     ':galeria_json' => $galeriaUrls ? json_encode($galeriaUrls, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                    ':horarios_json' => json_encode($horariosDisponiveis, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':idiomas_json' => json_encode($idiomas, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':grupos_label' => $gruposLabel ?: null,
+                    ':destaques_json' => json_encode($destaques, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':garantias_json' => json_encode($garantias, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':min_pessoas' => $minPessoas,
+                    ':max_pessoas' => $maxPessoas,
+                    ':permitir_a_combinar' => $permitirACombinar,
                     ':destaque' => $destaque,
                     ':ativo' => $ativo,
                     ':id' => $originalId,
@@ -283,9 +459,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['senha'])) {
                 }
 
                 $stmt = $db->prepare('INSERT INTO passeios
-                    (id, titulo, destino, categoria, descricao, descricao_detalhada, duracao, preco_valor, preco_label, destaque, imagem_url, galeria_json, ativo)
+                    (id, titulo, destino, categoria, descricao, descricao_detalhada, duracao, preco_valor, preco_label, imagem_url, galeria_json, horarios_json, idiomas_json, grupos_label, destaques_json, garantias_json, min_pessoas, max_pessoas, permitir_a_combinar, destaque, ativo)
                     VALUES
-                    (:id, :titulo, :destino, :categoria, :descricao, :descricao_detalhada, :duracao, :preco_valor, :preco_label, :destaque, :imagem_url, :galeria_json, :ativo)');
+                    (:id, :titulo, :destino, :categoria, :descricao, :descricao_detalhada, :duracao, :preco_valor, :preco_label, :imagem_url, :galeria_json, :horarios_json, :idiomas_json, :grupos_label, :destaques_json, :garantias_json, :min_pessoas, :max_pessoas, :permitir_a_combinar, :destaque, :ativo)');
 
                 $stmt->execute([
                     ':id' => $id,
@@ -297,9 +473,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['senha'])) {
                     ':duracao' => $duracao ?: null,
                     ':preco_valor' => $precoValor,
                     ':preco_label' => $precoLabel ?: null,
-                    ':destaque' => $destaque,
                     ':imagem_url' => $imagemUrl ?: null,
                     ':galeria_json' => $galeriaUrls ? json_encode($galeriaUrls, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null,
+                    ':horarios_json' => json_encode($horariosDisponiveis, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':idiomas_json' => json_encode($idiomas, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':grupos_label' => $gruposLabel ?: null,
+                    ':destaques_json' => json_encode($destaques, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':garantias_json' => json_encode($garantias, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ':min_pessoas' => $minPessoas,
+                    ':max_pessoas' => $maxPessoas,
+                    ':permitir_a_combinar' => $permitirACombinar,
+                    ':destaque' => $destaque,
                     ':ativo' => $ativo,
                 ]);
 
@@ -366,13 +550,25 @@ $stats = $db->query("SELECT
     FROM reservas r
     LEFT JOIN passeios p ON p.id = r.passeio_id")->fetch();
 
-$passeioStats = $db->query("SELECT
-    COUNT(*) AS total_passeios,
-    SUM(ativo = 1) AS passeios_ativos,
-    SUM(ativo = 0) AS passeios_inativos,
-    SUM(destaque = 1) AS passeios_destaque,
-    COUNT(DISTINCT NULLIF(destino, '')) AS total_destinos
-    FROM passeios")->fetch();
+if ($trashColumnAvailable) {
+    $passeioStats = $db->query("SELECT
+        SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS total_passeios,
+        SUM(CASE WHEN deleted_at IS NULL AND ativo = 1 THEN 1 ELSE 0 END) AS passeios_ativos,
+        SUM(CASE WHEN deleted_at IS NULL AND ativo = 0 THEN 1 ELSE 0 END) AS passeios_inativos,
+        SUM(CASE WHEN deleted_at IS NULL AND destaque = 1 THEN 1 ELSE 0 END) AS passeios_destaque,
+        SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS passeios_lixeira,
+        COUNT(DISTINCT CASE WHEN deleted_at IS NULL AND destino <> '' THEN destino END) AS total_destinos
+        FROM passeios")->fetch();
+} else {
+    $passeioStats = $db->query("SELECT
+        COUNT(*) AS total_passeios,
+        SUM(ativo = 1) AS passeios_ativos,
+        SUM(ativo = 0) AS passeios_inativos,
+        SUM(destaque = 1) AS passeios_destaque,
+        COUNT(DISTINCT NULLIF(destino, '')) AS total_destinos,
+        0 AS passeios_lixeira
+        FROM passeios")->fetch();
+}
 
 $monthly = $db->query("SELECT
     DATE_FORMAT(r.created_at, '%Y-%m') AS periodo,
@@ -398,7 +594,18 @@ if ($buscaPasseio !== '') {
     $wherePasseios[] = '(p.titulo LIKE :busca_passeio OR p.destino LIKE :busca_passeio OR p.categoria LIKE :busca_passeio OR p.id LIKE :busca_passeio)';
     $paramsPasseios[':busca_passeio'] = '%' . $buscaPasseio . '%';
 }
-if ($statusPasseio !== '') {
+
+if ($trashColumnAvailable) {
+    if ($statusPasseio === 'trash') {
+        $wherePasseios[] = 'p.deleted_at IS NOT NULL';
+    } else {
+        $wherePasseios[] = 'p.deleted_at IS NULL';
+        if ($statusPasseio === '1' || $statusPasseio === '0') {
+            $wherePasseios[] = 'p.ativo = :status_passeio';
+            $paramsPasseios[':status_passeio'] = (int)$statusPasseio;
+        }
+    }
+} elseif ($statusPasseio !== '') {
     $wherePasseios[] = 'p.ativo = :status_passeio';
     $paramsPasseios[':status_passeio'] = (int)$statusPasseio;
 }
@@ -428,6 +635,14 @@ $editPasseio = [
     'preco_label' => '',
     'imagem_url' => '',
     'galeria' => [],
+    'horarios' => ['07:00', '08:00', '09:00', '10:00', '13:00', '14:00', '15:00'],
+    'idiomas' => ['Português', 'Inglês', 'Espanhol'],
+    'grupos_label' => 'Aceita grupos',
+    'destaques' => ['Guia Experiente', 'Seguro Incluído', 'Equipamentos Fornecidos', 'Cancelamento Flexível'],
+    'garantias' => ['Reserva segura', 'Cancelamento grátis'],
+    'min_pessoas' => 1,
+    'max_pessoas' => 50,
+    'permitir_a_combinar' => true,
     'ativo' => true,
     'destaque' => false,
 ];
@@ -466,7 +681,7 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
 .table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:14px 12px;border-bottom:1px solid #eef2f6;text-align:left;vertical-align:top}.table th{font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#fbfcfe;position:sticky;top:0}.table tr:hover td{background:#fcfdff}.tag{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:.78rem;font-weight:600}.tag.success{background:var(--success-bg);color:var(--success)}.tag.warning{background:var(--warning-bg);color:var(--warning)}.tag.danger{background:var(--danger-bg);color:var(--danger)}.tag.info{background:#eef8ff;color:#0b4f6c}
 .kpis{display:flex;gap:8px;flex-wrap:wrap}.muted{color:var(--muted)}.small{font-size:.84rem}.nowrap{white-space:nowrap}.pill-actions{display:flex;gap:8px;flex-wrap:wrap}.pagination{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}.pagination a{padding:8px 12px;background:#fff;border:1px solid var(--line);border-radius:10px}.pagination a.active{background:var(--primary);color:#fff;border-color:transparent}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.form-grid .span-2{grid-column:1 / -1}.checkbox-row{display:flex;gap:16px;flex-wrap:wrap}.checkbox{display:flex;align-items:center;gap:8px;background:#f8fafc;padding:12px 14px;border-radius:12px;border:1px solid #e9eef5}.checkbox input{width:auto;margin:0}
-.table td .inline-form{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}.thumb{width:54px;height:54px;border-radius:12px;object-fit:cover;background:#eef4f8}.empty{padding:28px;text-align:center;color:var(--muted)}.section{display:none}.section.active{display:block}
+.table td .inline-form{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}.thumb{width:54px;height:54px;border-radius:12px;object-fit:cover;background:#eef4f8}.empty{padding:28px;text-align:center;color:var(--muted)}.section{display:none}.section.active{display:block}.field-hint{display:block;margin-top:8px;color:var(--muted);font-size:.82rem;line-height:1.6}.preview-box{margin-top:14px;padding:16px;border:1px solid #d0d5dd;border-radius:16px;background:#fcfdff}.preview-box h3{margin:0 0 10px;color:var(--primary-dark);font-size:1rem}.preview-rich > *:first-child{margin-top:0}.preview-rich > *:last-child{margin-bottom:0}.preview-rich p{margin:0 0 14px;line-height:1.8}.preview-rich h3,.preview-rich h4{margin:20px 0 10px;color:var(--primary-dark)}.preview-rich ul,.preview-rich ol{list-style:none;padding:0;margin:0 0 14px}.preview-rich li{position:relative;padding-left:26px;margin-bottom:10px;line-height:1.6}.preview-rich li:before{content:'✓';position:absolute;left:0;color:var(--primary);font-weight:700}.preview-rich hr{border:0;border-top:1px solid #e4e7ec;margin:18px 0}
 @media (max-width:1200px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-2{grid-template-columns:1fr}.chart-row{grid-template-columns:82px 1fr 110px}}
 @media (max-width:900px){.layout{display:block}.sidebar{position:relative;height:auto;width:auto}.main{padding:18px}.form-grid{grid-template-columns:1fr}.cards{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.chart-row span:last-child{text-align:left}.table th,.table td{padding:12px 10px}}
 </style>
@@ -517,6 +732,12 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
       </div>
     <?php endif; ?>
 
+    <?php if (!$trashColumnAvailable): ?>
+      <div class="alert warning">
+        O botão de lixeira dos passeios depende da coluna <strong>deleted_at</strong>. Para liberar a exclusão para lixeira e restauração, execute novamente o arquivo <strong>database/upgrade-admin.sql</strong>.
+      </div>
+    <?php endif; ?>
+
     <section class="section <?= $tab === 'dashboard' ? 'active' : '' ?>">
       <div class="cards">
         <div class="card stat"><div class="label">Reservas totais</div><div class="value"><?= (int)($stats['total_reservas'] ?? 0) ?></div><div class="sub">Todas as solicitações recebidas</div></div>
@@ -529,7 +750,7 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
         <div class="card stat"><div class="label">Passeios ativos</div><div class="value"><?= (int)($passeioStats['passeios_ativos'] ?? 0) ?></div><div class="sub">Visíveis no site agora</div></div>
         <div class="card stat"><div class="label">Passeios ocultos</div><div class="value"><?= (int)($passeioStats['passeios_inativos'] ?? 0) ?></div><div class="sub">Desativados no catálogo</div></div>
         <div class="card stat"><div class="label">Passeios em destaque</div><div class="value"><?= (int)($passeioStats['passeios_destaque'] ?? 0) ?></div><div class="sub">Com priorização visual</div></div>
-        <div class="card stat"><div class="label">Destinos trabalhados</div><div class="value"><?= (int)($passeioStats['total_destinos'] ?? 0) ?></div><div class="sub">Locais cadastrados no catálogo</div></div>
+        <div class="card stat"><div class="label">Na lixeira</div><div class="value"><?= (int)($passeioStats['passeios_lixeira'] ?? 0) ?></div><div class="sub">Podem ser restaurados ou excluídos</div></div>
       </div>
 
       <div class="grid-2">
@@ -720,8 +941,13 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
                 <textarea name="descricao" placeholder="Texto resumido que aparece nos cards e detalhes."><?= h($editPasseio['descricao']) ?></textarea>
               </div>
               <div class="span-2">
-                <label>Descrição detalhada (aceita HTML)</label>
-                <textarea name="descricao_detalhada" placeholder="Você pode usar títulos, listas e parágrafos em HTML."><?= h($editPasseio['descricao_detalhada']) ?></textarea>
+                <label>Descrição detalhada (HTML opcional)</label>
+                <textarea id="descricao_detalhada" name="descricao_detalhada" placeholder="Cole texto normal com linhas em branco entre parágrafos ou, se preferir, use HTML simples."><?= h($editPasseio['descricao_detalhada']) ?></textarea>
+                <small class="field-hint">Agora o site formata automaticamente texto comum em parágrafos, títulos e listas. Se você já usar HTML simples, ele também será mantido.</small>
+                <div class="preview-box">
+                  <h3>Pré-visualização da descrição</h3>
+                  <div id="descricao_detalhada_preview" class="preview-rich muted">Digite acima para visualizar como o texto aparecerá na página do passeio.</div>
+                </div>
               </div>
               <div class="span-2">
                 <label>Imagem principal (Upload do PC)</label>
@@ -735,6 +961,48 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
                 <label>Ou cole as URLs da galeria (uma por linha)</label>
                 <textarea name="galeria_urls" placeholder="https://imagem-1.jpg&#10;https://imagem-2.jpg"><?= h(implode(PHP_EOL, $editPasseio['galeria'] ?? [])) ?></textarea>
               </div>
+
+              <div class="span-2" style="padding:18px;border:1px solid #e4e7ec;border-radius:18px;background:#fbfdff">
+                <div class="section-title" style="margin-bottom:10px">
+                  <h2 style="font-size:1rem">Configurações avançadas do passeio</h2>
+                  <span>Controle do card lateral e do formulário</span>
+                </div>
+                <div class="form-grid">
+                  <div>
+                    <label>Texto de grupos</label>
+                    <input type="text" name="grupos_label" value="<?= h($editPasseio['grupos_label'] ?? 'Aceita grupos') ?>" placeholder="Aceita grupos, Privativo, Até 10 pessoas...">
+                  </div>
+                  <div>
+                    <label>Idiomas (um por linha)</label>
+                    <textarea name="idiomas" placeholder="Português&#10;Inglês&#10;Espanhol"><?= h(implode(PHP_EOL, $editPasseio['idiomas'] ?? [])) ?></textarea>
+                  </div>
+                  <div>
+                    <label>Horários disponíveis (um por linha)</label>
+                    <textarea name="horarios_disponiveis" placeholder="07:00&#10;09:00&#10;13:30"><?= h(implode(PHP_EOL, $editPasseio['horarios'] ?? [])) ?></textarea>
+                    <small class="field-hint">Alimenta automaticamente o seletor de horários da reserva para esse passeio.</small>
+                  </div>
+                  <div>
+                    <label>Destaques rápidos (um por linha)</label>
+                    <textarea name="destaques" placeholder="Guia Experiente&#10;Seguro Incluído"><?= h(implode(PHP_EOL, $editPasseio['destaques'] ?? [])) ?></textarea>
+                  </div>
+                  <div>
+                    <label>Garantias do card lateral (um por linha)</label>
+                    <textarea name="garantias" placeholder="Reserva segura&#10;Cancelamento grátis"><?= h(implode(PHP_EOL, $editPasseio['garantias'] ?? [])) ?></textarea>
+                  </div>
+                  <div>
+                    <label>Quantidade mínima de pessoas</label>
+                    <input type="number" name="min_pessoas" min="1" max="100" value="<?= (int)($editPasseio['min_pessoas'] ?? 1) ?>">
+                  </div>
+                  <div>
+                    <label>Quantidade máxima de pessoas</label>
+                    <input type="number" name="max_pessoas" min="1" max="100" value="<?= (int)($editPasseio['max_pessoas'] ?? 50) ?>">
+                  </div>
+                  <div class="span-2 checkbox-row">
+                    <label class="checkbox"><input type="checkbox" name="permitir_a_combinar" value="1" <?= !empty($editPasseio['permitir_a_combinar']) ? 'checked' : '' ?>> Exibir opção "A combinar" no seletor de horários</label>
+                  </div>
+                </div>
+              </div>
+
               <div class="span-2 checkbox-row">
                 <label class="checkbox"><input type="checkbox" name="ativo" value="1" <?= !empty($editPasseio['ativo']) ? 'checked' : '' ?>> Mostrar no site</label>
                 <label class="checkbox"><input type="checkbox" name="destaque" value="1" <?= !empty($editPasseio['destaque']) ? 'checked' : '' ?>> Marcar como destaque</label>
@@ -762,9 +1030,9 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
             <span class="tag info"><i class="fas fa-image"></i> Galeria controlada pelo admin</span>
             <span class="tag info"><i class="fas fa-money-bill-wave"></i> Faturamento calculado no painel</span>
           </div>
-          <p class="muted" style="margin-top:16px;line-height:1.7">Sempre que você salvar um passeio, o catálogo da home e a página de detalhes passam a refletir esses dados pela API. Se quiser tirar um destino do ar temporariamente, basta desativar o passeio na lista abaixo.</p>
+          <p class="muted" style="margin-top:16px;line-height:1.7">Sempre que você salvar um passeio, o catálogo da home e a página de detalhes passam a refletir esses dados pela API. Se quiser tirar um destino do ar temporariamente, basta desativar o passeio na lista abaixo. Se quiser removê-lo da operação sem apagar de vez, use a lixeira para poder restaurar depois.</p>
           <?php if (!$extendedColumns): ?>
-            <div class="alert warning" style="margin-top:16px">O formulário acima depende das colunas novas no banco. Execute o upgrade SQL para liberar preço, descrição detalhada e galeria no admin.</div>
+            <div class="alert warning" style="margin-top:16px">O formulário acima depende das colunas novas no banco. Execute o upgrade SQL para liberar preço, descrição detalhada, galeria e o novo bloco avançado com horários, idiomas, limites de pessoas, destaques e garantias.</div>
           <?php endif; ?>
         </div>
       </div>
@@ -781,9 +1049,12 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
           <div class="field" style="max-width:220px">
             <label>Status</label>
             <select name="status_passeio">
-              <option value="">Todos</option>
+              <option value="" <?= $statusPasseio === '' ? 'selected' : '' ?>>Ativos + ocultos</option>
               <option value="1" <?= $statusPasseio === '1' ? 'selected' : '' ?>>Ativos</option>
               <option value="0" <?= $statusPasseio === '0' ? 'selected' : '' ?>>Ocultos</option>
+              <?php if ($trashColumnAvailable): ?>
+                <option value="trash" <?= $statusPasseio === 'trash' ? 'selected' : '' ?>>Na lixeira</option>
+              <?php endif; ?>
             </select>
           </div>
           <div class="actions">
@@ -821,7 +1092,11 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
                 </td>
                 <td class="nowrap"><?= h($p['preco_label'] ?: ($p['preco_valor'] !== null ? brl((float)$p['preco_valor']) : 'Consulte-nos')) ?></td>
                 <td>
-                  <span class="tag <?= !empty($p['ativo']) ? 'success' : 'danger' ?>"><?= !empty($p['ativo']) ? 'Ativo' : 'Oculto' ?></span>
+                  <?php if (!empty($p['na_lixeira'])): ?>
+                    <span class="tag warning">Na lixeira</span>
+                  <?php else: ?>
+                    <span class="tag <?= !empty($p['ativo']) ? 'success' : 'danger' ?>"><?= !empty($p['ativo']) ? 'Ativo' : 'Oculto' ?></span>
+                  <?php endif; ?>
                 </td>
                 <td>
                   <span class="tag <?= !empty($p['destaque']) ? 'info' : 'warning' ?>"><?= !empty($p['destaque']) ? 'Destaque' : 'Normal' ?></span>
@@ -829,15 +1104,34 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
                 <td>
                   <div class="pill-actions">
                     <a class="btn btn-light" href="<?= h(adminUrl(['tab' => 'passeios', 'edit' => $p['id']])) ?>"><i class="fas fa-pen"></i> Editar</a>
-                    <form method="POST">
-                      <input type="hidden" name="action" value="toggle_passeio">
-                      <input type="hidden" name="id" value="<?= h($p['id']) ?>">
-                      <input type="hidden" name="novo_status" value="<?= !empty($p['ativo']) ? '0' : '1' ?>">
-                      <button class="btn <?= !empty($p['ativo']) ? 'btn-warning' : 'btn-success' ?>" type="submit">
-                        <i class="fas <?= !empty($p['ativo']) ? 'fa-eye-slash' : 'fa-eye' ?>"></i>
-                        <?= !empty($p['ativo']) ? 'Ocultar' : 'Ativar' ?>
-                      </button>
-                    </form>
+
+                    <?php if (!empty($p['na_lixeira'])): ?>
+                      <form method="POST" onsubmit="return confirm('Restaurar este passeio da lixeira? Ele continuará oculto até você ativá-lo novamente.')">
+                        <input type="hidden" name="action" value="restore_passeio">
+                        <input type="hidden" name="id" value="<?= h($p['id']) ?>">
+                        <button class="btn btn-success" type="submit"><i class="fas fa-trash-arrow-up"></i> Restaurar</button>
+                      </form>
+                      <form method="POST" onsubmit="return confirm('Excluir este passeio permanentemente? Essa ação não poderá ser desfeita.')">
+                        <input type="hidden" name="action" value="delete_passeio_forever">
+                        <input type="hidden" name="id" value="<?= h($p['id']) ?>">
+                        <button class="btn btn-danger" type="submit"><i class="fas fa-trash-can"></i> Excluir de vez</button>
+                      </form>
+                    <?php else: ?>
+                      <form method="POST">
+                        <input type="hidden" name="action" value="toggle_passeio">
+                        <input type="hidden" name="id" value="<?= h($p['id']) ?>">
+                        <input type="hidden" name="novo_status" value="<?= !empty($p['ativo']) ? '0' : '1' ?>">
+                        <button class="btn <?= !empty($p['ativo']) ? 'btn-warning' : 'btn-success' ?>" type="submit">
+                          <i class="fas <?= !empty($p['ativo']) ? 'fa-eye-slash' : 'fa-eye' ?>"></i>
+                          <?= !empty($p['ativo']) ? 'Ocultar' : 'Ativar' ?>
+                        </button>
+                      </form>
+                      <form method="POST" onsubmit="return confirm('Mover este passeio para a lixeira? Você poderá restaurá-lo depois.')">
+                        <input type="hidden" name="action" value="move_passeio_trash">
+                        <input type="hidden" name="id" value="<?= h($p['id']) ?>">
+                        <button class="btn btn-danger" type="submit"><i class="fas fa-trash"></i> Lixeira</button>
+                      </form>
+                    <?php endif; ?>
                   </div>
                 </td>
               </tr>
@@ -849,5 +1143,118 @@ $categorias = $db->query("SELECT DISTINCT categoria FROM passeios WHERE categori
     </section>
   </main>
 </div>
+<script>
+function escapeAdminHtml(texto) {
+  return String(texto || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function adminDescricaoTemHtml(texto) {
+  return /<\s*(p|br|ul|ol|li|strong|em|b|i|u|h2|h3|h4|hr|a)\b/i.test(texto || '');
+}
+
+function adminLinhaLista(linha) {
+  return /^([\-*•◦▪▫■□●✔✅☑️✓]|\d+[.)])\s+/u.test(linha) || /^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]\s+/u.test(linha);
+}
+
+function adminLimparMarcadorLista(linha) {
+  return String(linha || '').replace(/^([\-*•◦▪▫■□●✔✅☑️✓]|\d+[.)])\s+/u, '').trim();
+}
+
+function adminLinhaTitulo(linha) {
+  const texto = String(linha || '').trim();
+  if (!texto || adminLinhaLista(texto) || texto.length > 90) return false;
+  return texto.endsWith(':') || /^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u.test(texto) || /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ0-9][^.!?]*$/u.test(texto);
+}
+
+function adminSanitizarHtmlBasico(html) {
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  const permitidas = new Set(['P', 'BR', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'B', 'I', 'U', 'H2', 'H3', 'H4', 'HR', 'A']);
+
+  const limparNo = (node) => {
+    [...node.children].forEach((child) => {
+      if (!permitidas.has(child.tagName)) {
+        const fragment = document.createDocumentFragment();
+        while (child.firstChild) fragment.appendChild(child.firstChild);
+        child.replaceWith(fragment);
+        return;
+      }
+
+      [...child.attributes].forEach((attr) => {
+        const nome = attr.name.toLowerCase();
+        const valor = attr.value || '';
+        const permitido = child.tagName === 'A' && ['href', 'target', 'rel'].includes(nome);
+        if (!permitido) {
+          child.removeAttribute(attr.name);
+          return;
+        }
+        if (nome === 'href' && !/^(https?:|mailto:|tel:|#|\/)/i.test(valor)) {
+          child.removeAttribute(attr.name);
+        }
+      });
+
+      if (child.tagName === 'A') {
+        child.setAttribute('rel', 'noopener noreferrer');
+        child.setAttribute('target', '_blank');
+      }
+
+      limparNo(child);
+    });
+  };
+
+  limparNo(template.content);
+  return template.innerHTML;
+}
+
+function formatarDescricaoAdmin(texto) {
+  const normalizado = String(texto || '').replace(/\r\n?/g, '\n').trim();
+  if (!normalizado) return '';
+  if (adminDescricaoTemHtml(normalizado)) return adminSanitizarHtmlBasico(normalizado);
+
+  return normalizado
+    .split(/\n{2,}/)
+    .map((bloco) => bloco.trim())
+    .filter(Boolean)
+    .map((bloco) => {
+      const blocoSemEspacos = bloco.replace(/\s+/g, '');
+      if (/^[-_]{3,}$/u.test(blocoSemEspacos)) return '<hr>';
+
+      const linhas = bloco.split('\n').map((linha) => linha.trim()).filter(Boolean);
+      if (!linhas.length) return '';
+      if (linhas.length === 1 && adminLinhaTitulo(linhas[0])) return `<h3>${escapeAdminHtml(linhas[0].replace(/:$/, ''))}</h3>`;
+      if (linhas.every(adminLinhaLista)) return `<ul>${linhas.map((linha) => `<li>${escapeAdminHtml(adminLimparMarcadorLista(linha))}</li>`).join('')}</ul>`;
+      return `<p>${linhas.map((linha) => escapeAdminHtml(linha)).join('<br>')}</p>`;
+    })
+    .join('');
+}
+
+function initDescricaoPreview() {
+  const campo = document.getElementById('descricao_detalhada');
+  const preview = document.getElementById('descricao_detalhada_preview');
+  if (!campo || !preview) return;
+
+  const render = () => {
+    const html = formatarDescricaoAdmin(campo.value);
+    if (!html) {
+      preview.classList.add('muted');
+      preview.innerHTML = 'Digite acima para visualizar como o texto aparecerá na página do passeio.';
+      return;
+    }
+
+    preview.classList.remove('muted');
+    preview.innerHTML = html;
+  };
+
+  campo.addEventListener('input', render);
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', initDescricaoPreview);
+</script>
 </body>
 </html>

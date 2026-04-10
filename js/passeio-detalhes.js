@@ -8,6 +8,8 @@ let relacionadosSwiper = null;
 
 const API_TIMEOUT = 8000;
 const PAGE_ASSET_BUSTER = Date.now();
+const i18nText = (text) => window.SiteI18n?.translateText ? window.SiteI18n.translateText(text) : text;
+const i18nLocale = () => window.SiteI18n?.getLocale ? window.SiteI18n.getLocale() : 'pt-BR';
 let siteMedia = {
     asset_version: String(PAGE_ASSET_BUSTER),
     branding: {
@@ -143,6 +145,13 @@ function normalizarPasseioDetalhes(passeio) {
     const galeria = Array.isArray(passeio.galeria) && passeio.galeria.length
         ? passeio.galeria.map(item => resolverAssetUrl(item))
         : (imagemPrincipal ? [imagemPrincipal] : []);
+    const horarios = Array.isArray(passeio.horarios) ? passeio.horarios.filter(Boolean) : ['07:00', '08:00', '09:00', '10:00', '13:00', '14:00', '15:00'];
+    const idiomas = Array.isArray(passeio.idiomas) ? passeio.idiomas.filter(Boolean) : ['Português', 'Inglês'];
+    const destaques = Array.isArray(passeio.destaques) ? passeio.destaques.filter(Boolean) : ['Guia Experiente', 'Seguro Incluído', 'Equipamentos Fornecidos', 'Cancelamento Flexível'];
+    const garantias = Array.isArray(passeio.garantias) ? passeio.garantias.filter(Boolean) : ['Reserva segura', 'Cancelamento grátis'];
+    const minPessoas = Math.max(1, parseInt(passeio.min_pessoas ?? passeio.minPessoas ?? 1, 10) || 1);
+    const maxPessoas = Math.max(minPessoas, parseInt(passeio.max_pessoas ?? passeio.maxPessoas ?? 50, 10) || 50);
+    const permitirACombinar = !(passeio.permitir_a_combinar === false || passeio.permitir_a_combinar === 0 || passeio.permitir_a_combinar === '0');
 
     return {
         ...passeio,
@@ -158,8 +167,61 @@ function normalizarPasseioDetalhes(passeio) {
         galeria,
         valor: passeio.valor || passeio.preco_label || 'Consulte-nos',
         precoLabel: passeio.precoLabel || passeio.preco_label || passeio.valor || 'Consulte-nos',
-        precoValor: passeio.precoValor || passeio.preco_valor || null
+        precoValor: passeio.precoValor || passeio.preco_valor || null,
+        horarios,
+        idiomas,
+        gruposLabel: passeio.gruposLabel || passeio.grupos_label || 'Aceita grupos',
+        destaques,
+        garantias,
+        minPessoas,
+        maxPessoas,
+        permitirACombinar
     };
+}
+
+function formatarListaCurta(lista = []) {
+    return Array.isArray(lista) && lista.length ? lista.join(', ') : '-';
+}
+
+function renderizarListaInfo(containerId, items, itemClass, iconClass) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const lista = Array.isArray(items) ? items.filter(Boolean) : [];
+    container.innerHTML = lista.map((item) => `<div class="${itemClass}"><i class="fas ${iconClass}"></i><span>${escaparHtml(item)}</span></div>`).join('');
+}
+
+function popularHorariosDetalhes(passeio) {
+    const selectHorario = document.getElementById('horario');
+    if (!selectHorario) return;
+    const opcoes = ['<option value="">Selecione o horário</option>'];
+    (passeio?.horarios || []).forEach((horario) => opcoes.push(`<option value="${escaparHtml(horario)}">${escaparHtml(horario)}</option>`));
+    if (passeio?.permitirACombinar) opcoes.push('<option value="A combinar">A combinar</option>');
+    selectHorario.innerHTML = opcoes.join('');
+}
+
+function aplicarConfiguracoesReservaDetalhes(passeio) {
+    popularHorariosDetalhes(passeio);
+    const pessoasInput = document.getElementById('pessoas');
+    if (pessoasInput) {
+        pessoasInput.min = passeio?.minPessoas || 1;
+        pessoasInput.max = passeio?.maxPessoas || 50;
+        pessoasInput.value = String(passeio?.minPessoas || 1);
+    }
+}
+
+function aplicarClimaDoPasseio(passeio) {
+    const climaWidget = document.querySelector('.js-clima-widget');
+    if (!climaWidget) return;
+
+    const destino = passeio?.destino || 'Arraial do Cabo';
+
+    if (window.ClimaWidgetManager?.applyDestino) {
+        window.ClimaWidgetManager.applyDestino(climaWidget, destino);
+        return;
+    }
+
+    climaWidget.dataset.destino = destino;
+    climaWidget.dataset.place = destino.includes(',') ? destino : `${destino}, RJ`;
 }
 
 // ===== CARREGAR PASSEIO =====
@@ -194,6 +256,108 @@ async function carregarPasseio(id) {
 }
 
 // ===== RENDERIZAR PASSEIO =====
+function escaparHtml(texto = '') {
+    return String(texto)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function contemHtmlPermitido(texto = '') {
+    return /<\s*(p|br|ul|ol|li|strong|em|b|i|u|h2|h3|h4|hr|a)\b/i.test(texto);
+}
+
+function limparPrefixoLista(linha = '') {
+    return linha.replace(/^([\-*•◦▪▫■□●✔✅☑️✓]|\d+[.)])\s+/u, '').trim();
+}
+
+function linhaPareceLista(linha = '') {
+    return /^([\-*•◦▪▫■□●✔✅☑️✓]|\d+[.)])\s+/u.test(linha)
+        || /^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]\s+/u.test(linha);
+}
+
+function linhaPareceTitulo(linha = '') {
+    const texto = linha.trim();
+    if (!texto || linhaPareceLista(texto) || texto.length > 90) return false;
+    return texto.endsWith(':')
+        || /^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u.test(texto)
+        || /^[A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ0-9][^.!?]*$/u.test(texto);
+}
+
+function sanitizarHtmlBasico(html = '') {
+    const template = document.createElement('template');
+    template.innerHTML = html;
+
+    const permitidas = new Set(['P', 'BR', 'UL', 'OL', 'LI', 'STRONG', 'EM', 'B', 'I', 'U', 'H2', 'H3', 'H4', 'HR', 'A']);
+
+    const limparNo = (node) => {
+        [...node.children].forEach((child) => {
+            if (!permitidas.has(child.tagName)) {
+                const fragment = document.createDocumentFragment();
+                while (child.firstChild) fragment.appendChild(child.firstChild);
+                child.replaceWith(fragment);
+                return;
+            }
+
+            [...child.attributes].forEach((attr) => {
+                const nome = attr.name.toLowerCase();
+                const valor = attr.value || '';
+                const permitido = child.tagName === 'A' && ['href', 'target', 'rel'].includes(nome);
+                if (!permitido) {
+                    child.removeAttribute(attr.name);
+                    return;
+                }
+                if (nome === 'href' && !/^(https?:|mailto:|tel:|#|\/)/i.test(valor)) {
+                    child.removeAttribute(attr.name);
+                }
+            });
+
+            if (child.tagName === 'A') {
+                child.setAttribute('rel', 'noopener noreferrer');
+                child.setAttribute('target', '_blank');
+            }
+
+            limparNo(child);
+        });
+    };
+
+    limparNo(template.content);
+    return template.innerHTML;
+}
+
+function formatarDescricaoDetalhada(conteudo = '') {
+    const texto = String(conteudo || '').replace(/\r\n?/g, '\n').trim();
+    if (!texto) return '';
+
+    if (contemHtmlPermitido(texto)) {
+        return sanitizarHtmlBasico(texto);
+    }
+
+    const blocos = texto.split(/\n{2,}/).map((bloco) => bloco.trim()).filter(Boolean);
+
+    return blocos.map((bloco) => {
+        const blocoSemEspacos = bloco.replace(/\s+/g, '');
+        if (/^[-_]{3,}$/u.test(blocoSemEspacos)) {
+            return '<hr>';
+        }
+
+        const linhas = bloco.split('\n').map((linha) => linha.trim()).filter(Boolean);
+        if (!linhas.length) return '';
+
+        if (linhas.length === 1 && linhaPareceTitulo(linhas[0])) {
+            return `<h3>${escaparHtml(linhas[0].replace(/:$/, ''))}</h3>`;
+        }
+
+        if (linhas.every(linhaPareceLista)) {
+            return `<ul>${linhas.map((linha) => `<li>${escaparHtml(limparPrefixoLista(linha))}</li>`).join('')}</ul>`;
+        }
+
+        return `<p>${linhas.map((linha) => escaparHtml(linha)).join('<br>')}</p>`;
+    }).join('');
+}
+
 function renderizarPasseio() {
     document.getElementById('breadcrumb-current').textContent = passeioAtual.titulo;
     document.getElementById('page-title').textContent = `${passeioAtual.titulo} - Simplesmente Arraial do Cabo`;
@@ -212,7 +376,7 @@ function renderizarPasseio() {
     }
 
     if (passeioAtual.descricaoDetalhada) {
-        document.getElementById('passeio-descricao-detalhada').innerHTML = passeioAtual.descricaoDetalhada;
+        document.getElementById('passeio-descricao-detalhada').innerHTML = formatarDescricaoDetalhada(passeioAtual.descricaoDetalhada);
     } else {
         document.getElementById('passeio-descricao-detalhada').innerHTML = `
             <h3>Sobre este passeio</h3>
@@ -224,6 +388,13 @@ function renderizarPasseio() {
     document.getElementById('sidebar-valor').textContent = valor;
     document.getElementById('mobile-valor').textContent = valor;
     document.getElementById('modal-passeio-titulo').textContent = passeioAtual.titulo;
+    document.getElementById('sidebar-grupos').textContent = passeioAtual.gruposLabel || 'Aceita grupos';
+    document.getElementById('sidebar-idiomas').textContent = formatarListaCurta(passeioAtual.idiomas);
+
+    renderizarListaInfo('passeio-highlights', passeioAtual.destaques, 'highlight-item', 'fa-check-circle');
+    renderizarListaInfo('reserva-garantias', passeioAtual.garantias, 'garantia-item', 'fa-shield-alt');
+    aplicarConfiguracoesReservaDetalhes(passeioAtual);
+    aplicarClimaDoPasseio(passeioAtual);
 
     renderizarGaleria();
 }
@@ -442,12 +613,19 @@ async function handleReservaSubmit(e) {
     const observ = document.getElementById('observacoes').value.trim();
 
     if (!nome || !email || !telefone || !data || !horario || !pessoas) {
-        alert('Por favor, preencha todos os campos obrigatórios.');
+        alert(i18nText('Por favor, preencha todos os campos obrigatórios.'));
+        return;
+    }
+
+    const minPessoas = passeioAtual.minPessoas || 1;
+    const maxPessoas = passeioAtual.maxPessoas || 50;
+    if (pessoas < minPessoas || pessoas > maxPessoas) {
+        alert(`A quantidade de pessoas permitida para este passeio é de ${minPessoas} a ${maxPessoas}.`);
         return;
     }
 
     const btnConfirmar = document.getElementById('btn-confirmar');
-    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+    btnConfirmar.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${i18nText('Enviando...')}`;
     btnConfirmar.disabled = true;
 
     const payload = {
@@ -478,7 +656,7 @@ async function handleReservaSubmit(e) {
             document.getElementById('modal-sucesso').classList.add('show');
             document.body.style.overflow = 'hidden';
         } else {
-            alert('Erro ao registrar reserva: ' + (json.message || 'Tente novamente.'));
+            alert(`${i18nText('Erro ao registrar reserva:')} ${(json.message || i18nText('Tente novamente.'))}`);
         }
     } catch (err) {
         console.warn('API offline – abrindo WhatsApp diretamente.', err);
@@ -488,14 +666,14 @@ async function handleReservaSubmit(e) {
         document.getElementById('modal-sucesso').classList.add('show');
         document.body.style.overflow = 'hidden';
     } finally {
-        btnConfirmar.innerHTML = '<i class="fas fa-check"></i> Confirmar Reserva';
+        btnConfirmar.innerHTML = `<i class="fas fa-check"></i> ${i18nText('Confirmar Reserva')}`;
         btnConfirmar.disabled = false;
     }
 }
 
 function buildWhatsAppLink(p) {
     const dataFmt = p.data_passeio
-        ? new Date(p.data_passeio + 'T12:00:00').toLocaleDateString('pt-BR')
+        ? new Date(p.data_passeio + 'T12:00:00').toLocaleDateString(i18nLocale())
         : '-';
 
     const msg = encodeURIComponent(
@@ -540,7 +718,7 @@ function scrollToReserva() {
 function abrirWhatsApp() {
     if (!passeioAtual) return;
     const msg = encodeURIComponent(
-        `Olá! Gostaria de mais informações sobre o passeio:\n\n${passeioAtual.titulo}\n\nDestino: ${passeioAtual.destino || 'Diversos'}`
+        `${i18nText('Olá! Gostaria de mais informações sobre o passeio:')}\n\n${passeioAtual.titulo}\n\n${i18nText('Destino')}: ${passeioAtual.destino || i18nText('Diversos destinos')}`
     );
     window.open(`https://wa.me/5522981709100?text=${msg}`, '_blank');
 }
@@ -557,19 +735,19 @@ function compartilharFacebook() {
 
 function compartilharTwitter() {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent(passeioAtual?.titulo || 'Confira este passeio incrível!');
+    const text = encodeURIComponent(passeioAtual?.titulo || i18nText('Confira este passeio incrível!'));
     window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
 }
 
 function compartilharWhatsApp() {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent(`Confira este passeio: ${passeioAtual?.titulo || ''}\n\n`);
+    const text = encodeURIComponent(`${i18nText('Confira este passeio:')} ${passeioAtual?.titulo || ''}\n\n`);
     window.open(`https://wa.me/?text=${text}${url}`, '_blank');
 }
 
 function copiarLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
-        alert('Link copiado para a área de transferência!');
+        alert(i18nText('Link copiado para a área de transferência!'));
     }).catch(err => {
         console.error('Erro ao copiar:', err);
     });

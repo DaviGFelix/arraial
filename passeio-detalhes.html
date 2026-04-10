@@ -123,8 +123,17 @@
                             <p id="passeio-descricao">-</p>
                         </div>
 
+                        <div class="passeio-clima" aria-label="Clima e mar em tempo real do passeio">
+                            <div class="clima__widget clima__widget--hero js-clima-widget" data-lat="-22.96583" data-lon="-42.02778" data-place="Arraial do Cabo, RJ" data-timezone="America/Sao_Paulo">
+                                <div class="clima__loading">
+                                    <i class="fas fa-cloud-sun"></i>
+                                    <p>Carregando clima e mar ao vivo do destino deste passeio...</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Características Rápidas -->
-                        <div class="passeio-highlights">
+                        <div class="passeio-highlights" id="passeio-highlights">
                             <div class="highlight-item">
                                 <i class="fas fa-check-circle"></i>
                                 <span>Guia Experiente</span>
@@ -183,14 +192,14 @@
                                     <i class="fas fa-users"></i>
                                     <div>
                                         <strong>Grupos</strong>
-                                        <span>Aceita grupos</span>
+                                        <span id="sidebar-grupos">Aceita grupos</span>
                                     </div>
                                 </div>
                                 <div class="info-item">
                                     <i class="fas fa-language"></i>
                                     <div>
                                         <strong>Idiomas</strong>
-                                        <span>Português, Inglês</span>
+                                        <span id="sidebar-idiomas">Português, Inglês</span>
                                     </div>
                                 </div>
                             </div>
@@ -205,7 +214,7 @@
                                 Falar no WhatsApp
                             </button>
 
-                            <div class="reserva-garantias">
+                            <div class="reserva-garantias" id="reserva-garantias">
                                 <div class="garantia-item">
                                     <i class="fas fa-shield-alt"></i>
                                     <span>Reserva segura</span>
@@ -282,6 +291,18 @@
                     <p class="footer__description">
                         Proporcionando experiências inesquecíveis nos destinos mais belos do litoral do Rio de Janeiro.
                     </p>
+                    <div class="footer__trust">
+                        <span class="footer__badge"><i class="fas fa-shield-alt"></i> Reserva Segura</span>
+                        <div class="footer__cadastur">
+                            <p class="footer__cadastur-text">
+                                Registro no Cadastur<br>
+                                CNPJ: 29.017.025/0001-80
+                            </p>
+                            <a href="https://cadastur.turismo.gov.br/cadastur/#!/public/qrcode/29017025000180" target="_blank" rel="noopener noreferrer" class="footer__cadastur-link" aria-label="Ver registro Cadastur">
+                                <img src="uploads/cadastur-logo.png" alt="Cadastur" class="footer__cadastur-logo">
+                            </a>
+                        </div>
+                    </div>
                     <div class="footer__social">
                         <a href="#" class="footer__social-link" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
                         <a href="#" class="footer__social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
@@ -427,6 +448,8 @@
     <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
     <script src="js/passeios-data.js"></script>
     <script src="js/passeios-data-expandido.js"></script>
+<script src="js/i18n.js"></script>
     <script src="js/passeio-detalhes.js"></script>
+    <script src="js/clima-widget.js"></script>
 </body>
 </html>

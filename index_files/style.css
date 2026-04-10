@@ -156,11 +156,6 @@ input, select, textarea {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-}
-
-.nav__menu {
-    margin-left: auto;
 }
 
 .nav__logo {
@@ -3118,31 +3113,3 @@ input, select, textarea {
 .language-switcher__button.is-active{border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
 .language-switcher__flag{font-size:1.05rem;line-height:1}
 @media screen and (max-width:768px){.language-switcher{margin-right:12px;gap:6px}.language-switcher__button{width:34px;height:34px}}
-
-
-/* ===== AJUSTES DO CABEÇALHO E IDIOMA ===== */
-.language-switcher {
-    flex-shrink: 0;
-    margin-left: 0;
-    margin-right: 0;
-}
-
-.nav__toggle {
-    flex-shrink: 0;
-}
-
-@media screen and (max-width: 768px) {
-    .nav {
-        gap: 12px;
-    }
-
-    .nav__menu {
-        margin-left: 0;
-    }
-
-    .language-switcher {
-        gap: 6px;
-        margin-left: auto;
-        margin-right: 0;
-    }
-}

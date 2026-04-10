@@ -29,7 +29,7 @@ const climaWidget = document.getElementById('clima-widget');
 const API_TIMEOUT = 8000;
 const PAGE_ASSET_BUSTER = Date.now();
 const i18nText = (text) => window.SiteI18n?.translateText ? window.SiteI18n.translateText(text) : text;
-const i18nLocale = () => window.SiteI18n?.getLocale ? window.SiteI18n.getLocale() : 'pt-BR';
+const i18nLocale = () => window.SiteI18n?.getLocale ? window.SiteI18n.getLocale() : i18nLocale();
 
 // ===== MÍDIAS GLOBAIS DO SITE =====
 const DEFAULT_SITE_MEDIA = {

@@ -83,6 +83,21 @@ try {
             jsonResponse(['success' => false, 'message' => 'Este passeio não está disponível para reserva no momento'], 422);
         }
 
+        $minPermitido = max(1, (int)($passeioDb['min_pessoas'] ?? 1));
+        $maxPermitido = max($minPermitido, min(100, (int)($passeioDb['max_pessoas'] ?? 100)));
+        if ($qtd < $minPermitido || $qtd > $maxPermitido) {
+            jsonResponse(['success' => false, 'message' => "A quantidade permitida para este passeio é de {$minPermitido} a {$maxPermitido} pessoa(s)."], 422);
+        }
+
+        $horariosPermitidos = array_values(array_filter((array)($passeioDb['horarios'] ?? []), fn($item) => trim((string)$item) !== ''));
+        if (!empty($passeioDb['permitir_a_combinar'])) {
+            $horariosPermitidos[] = 'A combinar';
+        }
+        $horariosPermitidos = array_values(array_unique(array_map('trim', $horariosPermitidos)));
+        if ($horariosPermitidos && !in_array($horario, $horariosPermitidos, true)) {
+            jsonResponse(['success' => false, 'message' => 'O horário selecionado não está disponível para este passeio.'], 422);
+        }
+
         $passeioTit = $passeioDb['titulo'] ?: $passeioTit;
         $valorLabel = $passeioDb['preco_label'] ?: null;
         $valorUnitario = $passeioDb['preco_valor'] ?? null;

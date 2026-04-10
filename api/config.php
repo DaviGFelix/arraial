@@ -76,6 +76,42 @@ function assetUrl(?string $value, string $relativePrefix = ''): string {
     return isAbsoluteUrl($value) ? $value : $relativePrefix . ltrim($value, '/');
 }
 
+function normalizeTextList($value): array {
+    $items = is_array($value) ? $value : (preg_split('/\r\n|\r|\n/', (string)$value) ?: []);
+    $clean = [];
+    foreach ($items as $item) {
+        $item = trim((string)$item);
+        if ($item !== '') {
+            $clean[] = $item;
+        }
+    }
+    return array_values(array_unique($clean));
+}
+
+function decodeJsonList($raw): array {
+    if (is_array($raw)) {
+        return normalizeTextList($raw);
+    }
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    $decoded = json_decode((string)$raw, true);
+    return is_array($decoded) ? normalizeTextList($decoded) : [];
+}
+
+function defaultPasseioOperationalConfig(): array {
+    return [
+        'horarios' => ['07:00', '08:00', '09:00', '10:00', '13:00', '14:00', '15:00'],
+        'idiomas' => ['Português', 'Inglês', 'Espanhol'],
+        'grupos_label' => 'Aceita grupos',
+        'destaques' => ['Guia Experiente', 'Seguro Incluído', 'Equipamentos Fornecidos', 'Cancelamento Flexível'],
+        'garantias' => ['Reserva segura', 'Cancelamento grátis'],
+        'min_pessoas' => 1,
+        'max_pessoas' => 50,
+        'permitir_a_combinar' => true,
+    ];
+}
+
 function dataDirPath(): string {
     return dirname(__DIR__) . '/data';
 }
@@ -113,12 +149,20 @@ function tableHasColumn(string $table, string $column): bool {
 
 function passeioExtendedColumnsAvailable(): bool {
     return tableHasColumn('passeios', 'preco_valor') && tableHasColumn('passeios', 'preco_label') &&
-           tableHasColumn('passeios', 'descricao_detalhada') && tableHasColumn('passeios', 'galeria_json');
+           tableHasColumn('passeios', 'descricao_detalhada') && tableHasColumn('passeios', 'galeria_json') &&
+           tableHasColumn('passeios', 'horarios_json') && tableHasColumn('passeios', 'idiomas_json') &&
+           tableHasColumn('passeios', 'grupos_label') && tableHasColumn('passeios', 'destaques_json') &&
+           tableHasColumn('passeios', 'garantias_json') && tableHasColumn('passeios', 'min_pessoas') &&
+           tableHasColumn('passeios', 'max_pessoas') && tableHasColumn('passeios', 'permitir_a_combinar');
 }
 
 function reservasSnapshotColumnsAvailable(): bool {
     return tableHasColumn('reservas', 'valor_unitario_snapshot') &&
            tableHasColumn('reservas', 'valor_total_snapshot');
+}
+
+function passeioDeletedColumnAvailable(): bool {
+    return tableHasColumn('passeios', 'deleted_at');
 }
 
 function passeioSelectColumns(string $alias = 'p'): array {
@@ -128,6 +172,15 @@ function passeioSelectColumns(string $alias = 'p'): array {
     if (tableHasColumn('passeios', 'preco_label')) $cols[] = "{$alias}.preco_label";
     if (tableHasColumn('passeios', 'descricao_detalhada')) $cols[] = "{$alias}.descricao_detalhada";
     if (tableHasColumn('passeios', 'galeria_json')) $cols[] = "{$alias}.galeria_json";
+    if (tableHasColumn('passeios', 'horarios_json')) $cols[] = "{$alias}.horarios_json";
+    if (tableHasColumn('passeios', 'idiomas_json')) $cols[] = "{$alias}.idiomas_json";
+    if (tableHasColumn('passeios', 'grupos_label')) $cols[] = "{$alias}.grupos_label";
+    if (tableHasColumn('passeios', 'destaques_json')) $cols[] = "{$alias}.destaques_json";
+    if (tableHasColumn('passeios', 'garantias_json')) $cols[] = "{$alias}.garantias_json";
+    if (tableHasColumn('passeios', 'min_pessoas')) $cols[] = "{$alias}.min_pessoas";
+    if (tableHasColumn('passeios', 'max_pessoas')) $cols[] = "{$alias}.max_pessoas";
+    if (tableHasColumn('passeios', 'permitir_a_combinar')) $cols[] = "{$alias}.permitir_a_combinar";
+    if (passeioDeletedColumnAvailable()) $cols[] = "{$alias}.deleted_at";
     return $cols;
 }
 
@@ -136,6 +189,7 @@ function buildPasseioSelect(string $alias = 'p'): string {
 }
 
 function mapPasseioRow(array $row): array {
+    $defaults = defaultPasseioOperationalConfig();
     $galeria = [];
     if (!empty($row['galeria_json'])) {
         $json = json_decode((string)$row['galeria_json'], true);
@@ -143,15 +197,46 @@ function mapPasseioRow(array $row): array {
             $galeria = array_values(array_filter(array_map('trim', $json)));
         }
     }
+
+    $rawHorarios = $row['horarios_json'] ?? null;
+    $rawIdiomas = $row['idiomas_json'] ?? null;
+    $rawDestaques = $row['destaques_json'] ?? null;
+    $rawGarantias = $row['garantias_json'] ?? null;
+
+    $horarios = decodeJsonList($rawHorarios);
+    $idiomas = decodeJsonList($rawIdiomas);
+    $destaques = decodeJsonList($rawDestaques);
+    $garantias = decodeJsonList($rawGarantias);
+
+    if ($horarios === [] && ($rawHorarios === null || $rawHorarios === '')) $horarios = $defaults['horarios'];
+    if ($idiomas === [] && ($rawIdiomas === null || $rawIdiomas === '')) $idiomas = $defaults['idiomas'];
+    if ($destaques === [] && ($rawDestaques === null || $rawDestaques === '')) $destaques = $defaults['destaques'];
+    if ($garantias === [] && ($rawGarantias === null || $rawGarantias === '')) $garantias = $defaults['garantias'];
+
     $row['destaque'] = (bool)(int)($row['destaque'] ?? 0);
     $row['ativo'] = (bool)(int)($row['ativo'] ?? 0);
+    $row['deleted_at'] = !empty($row['deleted_at']) ? (string)$row['deleted_at'] : null;
+    $row['na_lixeira'] = passeioDeletedColumnAvailable() && !empty($row['deleted_at']);
     $row['galeria'] = $galeria;
+    $row['horarios'] = $horarios;
+    $row['idiomas'] = $idiomas;
+    $row['grupos_label'] = trim((string)($row['grupos_label'] ?? '')) ?: $defaults['grupos_label'];
+    $row['destaques'] = $destaques;
+    $row['garantias'] = $garantias;
+    $row['min_pessoas'] = max(1, min(100, (int)($row['min_pessoas'] ?? $defaults['min_pessoas'])));
+    $row['max_pessoas'] = max($row['min_pessoas'], min(100, (int)($row['max_pessoas'] ?? $defaults['max_pessoas'])));
+    $allowRaw = $row['permitir_a_combinar'] ?? $defaults['permitir_a_combinar'];
+    $row['permitir_a_combinar'] = !($allowRaw === false || $allowRaw === 0 || $allowRaw === '0');
     return $row;
 }
 
-function getPasseios(array $filters = [], bool $includeInactive = false): array {
+function getPasseios(array $filters = [], bool $includeInactive = false, bool $includeDeleted = false): array {
     $where = [];
     $params = [];
+
+    if (passeioDeletedColumnAvailable() && !$includeDeleted) {
+        $where[] = 'p.deleted_at IS NULL';
+    }
 
     if (!$includeInactive) {
         $where[] = 'p.ativo = 1';
@@ -194,8 +279,9 @@ function getPasseios(array $filters = [], bool $includeInactive = false): array 
     return array_map('mapPasseioRow', $stmt->fetchAll());
 }
 
-function getPasseioById(string $id, bool $includeInactive = false): ?array {
+function getPasseioById(string $id, bool $includeInactive = false, bool $includeDeleted = false): ?array {
     $sql = 'SELECT ' . buildPasseioSelect('p') . ' FROM passeios p WHERE p.id = :id';
+    if (passeioDeletedColumnAvailable() && !$includeDeleted) $sql .= ' AND p.deleted_at IS NULL';
     if (!$includeInactive) $sql .= ' AND p.ativo = 1';
     $stmt = getDB()->prepare($sql . ' LIMIT 1');
     $stmt->execute([':id' => $id]);
@@ -203,8 +289,8 @@ function getPasseioById(string $id, bool $includeInactive = false): ?array {
     return $row ? mapPasseioRow($row) : null;
 }
 
-function fetchAllPasseiosForSnapshot(bool $includeInactive = true): array {
-    return getPasseios([], $includeInactive);
+function fetchAllPasseiosForSnapshot(bool $includeInactive = true, bool $includeDeleted = false): array {
+    return getPasseios([], $includeInactive, $includeDeleted);
 }
 
 function saveCatalogSnapshot(?array $rows = null): bool {
@@ -227,9 +313,21 @@ function loadCatalogSnapshot(): array {
 
     return array_values(array_filter(array_map(function ($row) {
         if (!is_array($row)) return null;
+        $defaults = defaultPasseioOperationalConfig();
         $row['destaque'] = !empty($row['destaque']);
         $row['ativo'] = !array_key_exists('ativo', $row) || !empty($row['ativo']);
+        $row['deleted_at'] = !empty($row['deleted_at']) ? (string)$row['deleted_at'] : null;
+        $row['na_lixeira'] = !empty($row['deleted_at']);
         $row['galeria'] = array_values(array_filter(array_map('trim', (array)($row['galeria'] ?? []))));
+        $row['horarios'] = array_key_exists('horarios', $row) ? normalizeTextList((array)($row['horarios'] ?? [])) : $defaults['horarios'];
+        $row['idiomas'] = array_key_exists('idiomas', $row) ? normalizeTextList((array)($row['idiomas'] ?? [])) : $defaults['idiomas'];
+        $row['grupos_label'] = trim((string)($row['grupos_label'] ?? '')) ?: $defaults['grupos_label'];
+        $row['destaques'] = array_key_exists('destaques', $row) ? normalizeTextList((array)($row['destaques'] ?? [])) : $defaults['destaques'];
+        $row['garantias'] = array_key_exists('garantias', $row) ? normalizeTextList((array)($row['garantias'] ?? [])) : $defaults['garantias'];
+        $row['min_pessoas'] = max(1, min(100, (int)($row['min_pessoas'] ?? $defaults['min_pessoas'])));
+        $row['max_pessoas'] = max($row['min_pessoas'], min(100, (int)($row['max_pessoas'] ?? $defaults['max_pessoas'])));
+        $allowRaw = $row['permitir_a_combinar'] ?? $defaults['permitir_a_combinar'];
+        $row['permitir_a_combinar'] = !($allowRaw === false || $allowRaw === 0 || $allowRaw === '0');
         return $row;
     }, $decoded)));
 }
